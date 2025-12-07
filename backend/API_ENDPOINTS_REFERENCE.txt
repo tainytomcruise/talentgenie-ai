@@ -1,0 +1,609 @@
+================================================================================
+                    API ENDPOINTS REFERENCE GUIDE
+                    Recruitment AI Backend API
+================================================================================
+
+Base URL: {{base_url}} = http://localhost:5001
+
+================================================================================
+                        AUTHENTICATION ENDPOINTS
+================================================================================
+
+### User Login
+METHOD: POST
+URL: {{base_url}}/api/auth/login
+
+Body:
+{
+  "email": "hr@company.com",
+  "password": "password123",
+  "role": "hr"
+}
+
+Authorization: None
+
+
+### User Registration
+METHOD: POST
+URL: {{base_url}}/api/auth/register
+
+Body:
+{
+  "fullname": "John Doe",
+  "email": "john.doe@company.com",
+  "password": "SecurePass123!",
+  "role": "employee"
+}
+
+Authorization: None
+
+
+### Get Current User
+METHOD: GET
+URL: {{base_url}}/api/auth/me
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+================================================================================
+                        RECRUITMENT ENDPOINTS
+================================================================================
+
+### Upload and Parse Resumes
+METHOD: POST
+URL: {{base_url}}/api/recruitment/upload
+
+form-data:
+  - files[]: <resume.pdf or resume.docx>
+
+Authorization: None
+
+
+### Advanced Resume Parsing
+METHOD: POST
+URL: {{base_url}}/api/recruitment/parse
+
+form-data:
+  - file: <resume.pdf or resume.docx>
+
+Authorization: None
+
+
+### Match Candidates to Job
+METHOD: POST
+URL: {{base_url}}/api/recruitment/match
+
+Body:
+{
+  "job_description": "We are looking for a Senior Software Engineer with 5+ years of experience in Python and React...",
+  "job_id": 101
+}
+
+Authorization: None
+
+
+### Generate Interview Questions
+METHOD: POST
+URL: {{base_url}}/api/recruitment/questions
+
+Body:
+{
+  "candidate_name": "John Doe",
+  "skills": ["Python", "Machine Learning", "Docker"],
+  "job_description": "Senior ML Engineer position requiring expertise in Python and TensorFlow"
+}
+
+Authorization: None
+
+
+================================================================================
+                    POLICY & JOB GENERATION ENDPOINTS
+================================================================================
+
+### Generate Job Posting
+METHOD: POST
+URL: {{base_url}}/api/policy/generate/job
+
+Body:
+{
+  "jobTitle": "Senior Software Engineer",
+  "seniority": "Senior",
+  "companyName": "Tech Innovations Inc.",
+  "companyBlurb": "Leading provider of cloud-based solutions",
+  "field": "Software Development",
+  "location": "San Francisco, CA",
+  "employmentType": "Full-time",
+  "salaryRange": "$120,000 - $160,000",
+  "coreMission": "Build scalable cloud infrastructure",
+  "objectives": [
+    "Design and implement microservices",
+    "Lead technical architecture decisions",
+    "Mentor junior developers"
+  ],
+  "mustHaveSkills": ["Python", "AWS", "Kubernetes", "Docker"],
+  "niceToHaveSkills": ["GraphQL", "Terraform", "CI/CD"],
+  "tools": ["Git", "Jira", "Jenkins"],
+  "minExperience": "5+ years",
+  "benefits": [
+    "Health insurance",
+    "401(k) matching",
+    "Remote work options"
+  ],
+  "teamStructure": "Cross-functional team of 8 engineers",
+  "tone": "Professional"
+}
+
+Authorization: None
+
+
+### Generate Policy Document
+METHOD: POST
+URL: {{base_url}}/api/policy/generate/document
+
+Body:
+{
+  "location": "canada",
+  "requirements": "Remote work policy with flexible hours and equipment provisions"
+}
+
+Authorization: None
+
+
+### Get Available Policy Locations
+METHOD: GET
+URL: {{base_url}}/api/policy/locations
+
+Body: None
+
+Authorization: None
+
+
+### Get Available Writing Tones
+METHOD: GET
+URL: {{base_url}}/api/policy/tones
+
+Body: None
+
+Authorization: None
+
+
+================================================================================
+                        HR CHATBOT ENDPOINTS
+================================================================================
+
+### Chat with HR AI Assistant
+METHOD: POST
+URL: {{base_url}}/api/askhr/chat
+
+Body:
+{
+  "message": "What is the company's leave policy?",
+  "user_id": 1
+}
+
+Authorization: None
+
+
+### Get Chat History
+METHOD: GET
+URL: {{base_url}}/api/chat/history?user_id=1&limit=50
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+================================================================================
+                        ANALYTICS ENDPOINTS
+================================================================================
+
+### Get Analytics Summary
+METHOD: GET
+URL: {{base_url}}/api/analytics/summary
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Absenteeism Trends
+METHOD: GET
+URL: {{base_url}}/api/analytics/absenteeism-trends
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Retention Risk Distribution
+METHOD: GET
+URL: {{base_url}}/api/analytics/retention-risk
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Training Completion by Department
+METHOD: GET
+URL: {{base_url}}/api/analytics/training-completion
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Department Analytics
+METHOD: GET
+URL: {{base_url}}/api/analytics/departments
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Comprehensive Analytics Overview
+METHOD: GET
+URL: {{base_url}}/api/analytics/overview
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Recruitment Analytics
+METHOD: GET
+URL: {{base_url}}/api/analytics/recruitment
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Training Program Analytics
+METHOD: GET
+URL: {{base_url}}/api/analytics/training
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+================================================================================
+                    LEARNING & DEVELOPMENT ENDPOINTS
+================================================================================
+
+### Generate Learning Path
+METHOD: POST
+URL: {{base_url}}/api/learning/path/generate
+
+Body:
+{
+  "current_role": "Junior Developer",
+  "career_goal": "Senior Full Stack Developer",
+  "employee_id": 123
+}
+
+Authorization: None
+
+
+### Get Learning Progress
+METHOD: GET
+URL: {{base_url}}/api/learning/progress/123
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Mark Module as Complete
+METHOD: PATCH
+URL: {{base_url}}/api/learning/module/complete
+
+Body:
+{
+  "module_id": 456
+}
+
+Authorization: Bearer {{token}}
+
+
+### Get Available Roles and Goals
+METHOD: GET
+URL: {{base_url}}/api/learning/roles-goals
+
+Body: None
+
+Authorization: None
+
+
+================================================================================
+                    SENTIMENT ANALYSIS ENDPOINTS
+================================================================================
+
+### Analyze Sentiment
+METHOD: POST
+URL: {{base_url}}/api/sentiment/analyze
+
+Body:
+{
+  "feedback": [
+    "Great work-life balance and supportive team",
+    "Need better communication from management",
+    "Love the flexible working hours"
+  ]
+}
+
+Authorization: None
+
+
+### Get Sentiment Trends
+METHOD: GET
+URL: {{base_url}}/api/sentiment/trend
+
+Body: None
+
+Authorization: None
+
+
+### Get Sentiment Themes
+METHOD: GET
+URL: {{base_url}}/api/sentiment/themes
+
+Body: None
+
+Authorization: None
+
+
+================================================================================
+                        WELLNESS ENDPOINTS
+================================================================================
+
+### Get Wellness Resources
+METHOD: GET
+URL: {{base_url}}/api/wellness/resources
+
+Body: None
+
+Authorization: None
+
+
+### Get AI Wellness Tips
+METHOD: GET
+URL: {{base_url}}/api/wellness/tips?category=general
+
+Body: None
+
+Authorization: None
+
+
+### Get Wellness Events
+METHOD: GET
+URL: {{base_url}}/api/wellness/events
+
+Body: None
+
+Authorization: None
+
+
+### Register for Wellness Event
+METHOD: POST
+URL: {{base_url}}/api/wellness/events/register
+
+Body:
+{
+  "employee_id": 123,
+  "event_id": 456
+}
+
+Authorization: None
+
+
+================================================================================
+                    EMPLOYEE WELLNESS ENDPOINTS
+================================================================================
+
+### Get Employee Wellness Resources
+METHOD: GET
+URL: {{base_url}}/api/empwellness/resources
+
+Body: None
+
+Authorization: None
+
+
+### Get Employee Wellness Events
+METHOD: GET
+URL: {{base_url}}/api/empwellness/events
+
+Body: None
+
+Authorization: None
+
+
+### Register for Employee Wellness Event
+METHOD: POST
+URL: {{base_url}}/api/empwellness/register
+
+Body:
+{
+  "employee_id": 123,
+  "event_id": 456
+}
+
+Authorization: None
+
+
+================================================================================
+                        HR WELLNESS ENDPOINTS
+================================================================================
+
+### Get HR Wellness Resources
+METHOD: GET
+URL: {{base_url}}/api/hr/wellness/resources
+
+Body: None
+
+Authorization: None
+
+
+### Get Absence Alerts
+METHOD: GET
+URL: {{base_url}}/api/hr/wellness/alerts
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Employee Milestones
+METHOD: GET
+URL: {{base_url}}/api/hr/wellness/milestones
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Employee Awards
+METHOD: GET
+URL: {{base_url}}/api/hr/wellness/awards
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Upcoming Birthdays
+METHOD: GET
+URL: {{base_url}}/api/hr/wellness/birthdays
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get Wellness Surveys
+METHOD: GET
+URL: {{base_url}}/api/hr/wellness/surveys
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Create Wellness Survey
+METHOD: POST
+URL: {{base_url}}/api/hr/wellness/surveys
+
+Body:
+{
+  "title": "Q4 Wellness Survey",
+  "description": "Help us improve our wellness programs",
+  "deadline": "2025-12-31T23:59:59Z"
+}
+
+Authorization: Bearer {{token}}
+
+
+================================================================================
+                    EMPLOYEE DASHBOARD ENDPOINTS
+================================================================================
+
+### Get Employee Dashboard Summary
+METHOD: GET
+URL: {{base_url}}/api/employee/dashboard/summary?employee_id=123
+
+Body: None
+
+Authorization: Bearer {{token}}
+
+
+### Get AI Skill Recommendations
+METHOD: POST
+URL: {{base_url}}/api/employee/ai_skill_recommendations
+
+Body:
+{
+  "employee_id": 123,
+  "career_goal": "Senior Software Engineer"
+}
+
+Authorization: Bearer {{token}}
+
+
+### Generate Reference Letter
+METHOD: POST
+URL: {{base_url}}/api/employee/document_request/reference
+
+Body:
+{
+  "employee_id": 123,
+  "achievements": "Led successful migration to microservices, mentored 5 junior developers"
+}
+
+Authorization: Bearer {{token}}
+
+
+### Generate Employment Proof
+METHOD: POST
+URL: {{base_url}}/api/employee/document_request/employment_proof
+
+Body:
+{
+  "employee_id": 123
+}
+
+Authorization: Bearer {{token}}
+
+
+================================================================================
+                        SKILLS ENDPOINTS
+================================================================================
+
+### Get Trending Skills
+METHOD: GET
+URL: {{base_url}}/api/skills/trending?department=Technology
+
+Body: None
+
+Authorization: None
+
+
+================================================================================
+                        QUICK REFERENCE
+================================================================================
+
+AUTHENTICATION:
+- Most endpoints require: Authorization: Bearer {{token}}
+- Get token from: POST /api/auth/login
+- Token format: JWT (JSON Web Token)
+
+COMMON PARAMETERS:
+- employee_id: Integer (e.g., 123)
+- user_id: Integer (e.g., 1)
+- job_id: Integer (e.g., 101)
+- event_id: Integer (e.g., 456)
+- module_id: Integer (e.g., 789)
+
+FILE UPLOADS:
+- Use form-data for file uploads
+- Supported formats: PDF, DOCX
+- Fields: file or files[]
+
+QUERY PARAMETERS:
+- Use ? for first parameter
+- Use & for additional parameters
+- Example: /api/endpoint?param1=value1&param2=value2
+
+ERROR RESPONSES:
+- 400: Bad Request (invalid input)
+- 401: Unauthorized (missing/invalid token)
+- 404: Not Found (resource doesn't exist)
+- 500: Internal Server Error (server issue)
+
+================================================================================
+                        END OF REFERENCE
+================================================================================

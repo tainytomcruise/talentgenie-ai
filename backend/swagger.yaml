@@ -1,0 +1,3774 @@
+openapi: 3.0.3
+info:
+  title: Recruitment AI Backend API Documentation
+  version: 1.0.0
+  description: |
+    Complete API documentation for the HR Assistant and Recruitment AI Backend.
+    This API provides comprehensive HR management features including:
+    - Authentication and Authorization
+    - Recruitment and Resume Management
+    - Employee Management
+    - Analytics and Reporting
+    - Learning and Development
+    - Wellness Programs
+    - Sentiment Analysis
+    - AI-Powered HR Chatbot
+    
+    **Base URL**: `http://localhost:5001`
+    
+    **Authentication**: Most endpoints require JWT Bearer token authentication.
+  contact:
+    name: API Support
+    email: support@recruitmentai.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5001
+    description: Development server
+  - url: https://api.recruitmentai.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and registration endpoints
+  - name: Recruitment
+    description: Resume upload, parsing, and candidate matching
+  - name: Policy & Job Generation
+    description: AI-powered job posting and policy document generation
+  - name: HR Chatbot
+    description: AI-powered HR assistant chatbot
+  - name: Analytics
+    description: HR analytics and reporting
+  - name: Learning & Development
+    description: Learning paths and training management
+  - name: Sentiment Analysis
+    description: Employee sentiment analysis and trends
+  - name: Wellness
+    description: Employee wellness resources and events
+  - name: Employee Dashboard
+    description: Employee dashboard and profile management
+  - name: Skills
+    description: Skill recommendations and trending skills
+
+paths:
+  # ==================== AUTHENTICATION ROUTES ====================
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticate user and receive JWT token.
+        **User Story**: As an HR Manager or Employee, I want to log in to the system so that I can access my personalized dashboard and features.
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - role
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: hr@company.com
+                  description: User email address
+                password:
+                  type: string
+                  format: password
+                  example: password123
+                  description: User password
+                role:
+                  type: string
+                  enum: [hr, employee, admin, manager, executive]
+                  example: hr
+                  description: User role for role-based access
+            examples:
+              hrLogin:
+                summary: HR Manager Login
+                value:
+                  email: hr@company.com
+                  password: password123
+                  role: hr
+              employeeLogin:
+                summary: Employee Login
+                value:
+                  email: employee@company.com
+                  password: password123
+                  role: employee
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged in successfully
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    description: JWT access token for authentication
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: User not found or role mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: User not found or role mismatch
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: |
+        Register a new user account.
+        **User Story**: As a new user, I want to register an account so that I can access the HR system.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fullname
+                - email
+                - password
+              properties:
+                fullname:
+                  type: string
+                  example: John Doe
+                  description: Full name of the user
+                email:
+                  type: string
+                  format: email
+                  example: john.doe@company.com
+                  description: Email address (must be unique)
+                password:
+                  type: string
+                  format: password
+                  example: SecurePass123!
+                  description: Password (min 8 characters recommended)
+                role:
+                  type: string
+                  enum: [employee, hr, admin, manager, executive]
+                  default: employee
+                  example: employee
+                  description: User role (defaults to employee)
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User registered successfully
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: User already exists
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: |
+        Retrieve current authenticated user information.
+        **User Story**: As a logged-in user, I want to view my profile information so that I can verify my account details.
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== RECRUITMENT ROUTES ====================
+  /api/recruitment/upload:
+    post:
+      tags:
+        - Recruitment
+      summary: Upload and parse resumes
+      description: |
+        Upload multiple resume files for AI-powered parsing and extraction.
+        
+        **User Story**: As an HR Manager, I want to upload candidate resumes so that the system can automatically extract and analyze their information.
+        
+        **Functionality**: AI-powered resume processing that:
+        - Accepts PDF and DOCX file formats
+        - Extracts candidate information (name, email, phone)
+        - Identifies skills and technologies
+        - Parses work experience and education
+        - Generates structured data for candidate evaluation
+        - Supports batch processing of multiple resumes
+      operationId: uploadResumes
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files[]
+              properties:
+                files[]:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Resume files (PDF or DOCX format)
+      responses:
+        '200':
+          description: Resumes uploaded and parsed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Processed 3 files
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        filename:
+                          type: string
+                          example: john_doe_resume.pdf
+                        status:
+                          type: string
+                          enum: [success, error]
+                          example: success
+                        parsed_data:
+                          $ref: '#/components/schemas/ParsedResume'
+                        resume_id:
+                          type: integer
+                          example: 123
+                        error:
+                          type: string
+                          example: Failed to parse resume
+        '400':
+          description: No files uploaded or invalid file type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/recruitment/parse:
+    post:
+      tags:
+        - Recruitment
+      summary: Advanced resume parsing
+      description: |
+        Parse a single resume with advanced AI extraction.
+        **User Story**: As an HR Manager, I want to parse a resume to extract detailed candidate information including skills, experience, and contact details.
+      operationId: parseResume
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Resume file (PDF or DOCX)
+      responses:
+        '200':
+          description: Resume parsed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Resume parsed successfully
+                  parsed_resume:
+                    $ref: '#/components/schemas/ParsedResume'
+                  resume_id:
+                    type: integer
+                    example: 456
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/recruitment/match:
+    post:
+      tags:
+        - Recruitment
+      summary: Match candidates to job
+      description: |
+        Match and rank candidates against a job description using AI algorithms.
+        
+        **User Story**: As an HR Manager, I want to match candidates to a job description so that I can identify the best-fit applicants.
+        
+        **Functionality**: Intelligent candidate matching that:
+        - Analyzes job requirements vs candidate profiles
+        - Calculates match scores (0-100%)
+        - Identifies skill overlaps and gaps
+        - Ranks candidates by fit
+        - Provides detailed matching rationale
+        - Accelerates candidate screening process
+      operationId: matchCandidates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - job_description
+              properties:
+                job_description:
+                  type: string
+                  example: We are looking for a Senior Software Engineer with 5+ years of experience in Python and React...
+                  description: Job description text
+                job_id:
+                  type: integer
+                  example: 101
+                  description: Optional job ID for tracking
+      responses:
+        '200':
+          description: Candidate matching completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Candidate matching complete
+                  job_id:
+                    type: integer
+                    example: 101
+                  total_candidates:
+                    type: integer
+                    example: 15
+                  rankings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        candidate_id:
+                          type: integer
+                          example: 789
+                        name:
+                          type: string
+                          example: Jane Smith
+                        match_score:
+                          type: number
+                          format: float
+                          example: 87.5
+                        skills_match:
+                          type: array
+                          items:
+                            type: string
+                          example: [Python, React, AWS]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/recruitment/questions:
+    post:
+      tags:
+        - Recruitment
+      summary: Generate interview questions
+      description: |
+        Generate AI-powered interview questions based on candidate profile and job requirements.
+        **User Story**: As an HR Manager, I want to generate relevant interview questions so that I can effectively assess candidates.
+      operationId: generateInterviewQuestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                candidate_name:
+                  type: string
+                  example: John Doe
+                  description: Candidate name
+                skills:
+                  type: array
+                  items:
+                    type: string
+                  example: [Python, Machine Learning, Docker]
+                  description: Candidate skills
+                job_description:
+                  type: string
+                  example: Senior ML Engineer position requiring expertise in Python and TensorFlow
+                  description: Job description
+      responses:
+        '200':
+          description: Interview questions generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Interview questions generated
+                  questions:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Tell me about your experience with Python and Machine Learning
+                      - Describe a challenging ML project you've worked on
+                      - How do you approach model optimization?
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== POLICY & JOB GENERATION ROUTES ====================
+  /api/policy/generate/job:
+    post:
+      tags:
+        - Policy & Job Generation
+      summary: Generate job posting
+      description: |
+        Generate AI-powered job posting with structured content.
+        **User Story**: As an HR Manager, I want to generate professional job postings so that I can attract qualified candidates efficiently.
+      operationId: generateJobPosting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobPostingRequest'
+      responses:
+        '200':
+          description: Job posting generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Job posting generated
+                  html:
+                    type: string
+                    example: <div class="job-posting"><h1>Senior Software Engineer</h1>...</div>
+                    description: HTML formatted job posting
+                  structured_jd:
+                    type: object
+                    properties:
+                      role_definition:
+                        type: object
+                        properties:
+                          Job_Title:
+                            type: string
+                            example: Senior Software Engineer
+                          Seniority:
+                            type: string
+                            example: Senior
+                      structured_text:
+                        type: string
+                        example: We are seeking an experienced Senior Software Engineer...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/policy/generate/document:
+    post:
+      tags:
+        - Policy & Job Generation
+      summary: Generate policy document
+      description: |
+        Generate HR policy documents tailored to specific locations and requirements.
+        **User Story**: As an HR Manager, I want to generate compliant policy documents so that I can ensure legal compliance across different regions.
+      operationId: generatePolicyDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - location
+                - requirements
+              properties:
+                location:
+                  type: string
+                  example: canada
+                  description: Location/country for policy compliance
+                requirements:
+                  type: string
+                  example: Remote work policy with flexible hours and equipment provisions
+                  description: Policy requirements and specifications
+      responses:
+        '200':
+          description: Policy document generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Policy document generated
+                  document:
+                    type: string
+                    example: |
+                      REMOTE WORK POLICY
+                      
+                      1. Purpose
+                      This policy outlines the guidelines for remote work arrangements...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/policy/locations:
+    get:
+      tags:
+        - Policy & Job Generation
+      summary: Get available policy locations
+      description: |
+        Get list of supported countries/locations for policy document generation.
+        
+        **User Story**: As an HR Manager, I want to see available locations so that I can generate compliant policies for different regions.
+        
+        **Functionality**: Returns list of supported locations where the system can generate:
+        - Region-specific HR policies
+        - Compliance-aware documents
+        - Location-appropriate legal language
+      operationId: getPolicyLocations
+      responses:
+        '200':
+          description: Locations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  locations:
+                    type: array
+                    items:
+                      type: string
+                    example: [canada, usa, uk, australia, india, germany, france, singapore, uae]
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/policy/tones:
+    get:
+      tags:
+        - Policy & Job Generation
+      summary: Get available writing tones
+      description: |
+        Get list of available writing tones for job posting and document generation.
+        
+        **User Story**: As an HR Manager, I want to choose different writing tones so that I can match the company culture and target audience.
+        
+        **Functionality**: Returns available tone options for:
+        - Job posting generation
+        - Policy document creation
+        - Customizing communication style
+        - Matching company brand voice
+      operationId: getWritingTones
+      responses:
+        '200':
+          description: Tones retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tones:
+                    type: array
+                    items:
+                      type: string
+                    example: [Professional, Friendly, Formal, Startup-friendly, Creative, Technical]
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== HR CHATBOT ROUTES ====================
+  /api/askhr/chat:
+    post:
+      tags:
+        - HR Chatbot
+      summary: Chat with HR AI assistant
+      description: |
+        Send a message to the AI-powered HR chatbot and receive intelligent responses.
+        
+        **User Story**: As an employee, I want to ask HR-related questions to the chatbot so that I can get instant answers without waiting for HR staff.
+        
+        **Functionality**: AI-powered HR assistant that:
+        - Answers policy and procedure questions
+        - Provides leave and benefits information
+        - Explains company guidelines
+        - Available 24/7 for instant support
+        - Maintains conversation history
+        - Reduces HR workload for routine inquiries
+      operationId: chatWithHR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  example: What is the company's leave policy?
+                  description: User message/question
+                user_id:
+                  type: integer
+                  example: 1
+                  default: 1
+                  description: User ID for chat history tracking
+      responses:
+        '200':
+          description: Response generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    example: Our company offers 15 days of paid leave per year. You can apply for leave through the HR portal...
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: 2025-11-15T10:30:00Z
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/chat/history:
+    get:
+      tags:
+        - HR Chatbot
+      summary: Get chat history
+      description: |
+        Retrieve chat conversation history for a user.
+        **User Story**: As a user, I want to view my previous chat conversations so that I can reference past discussions.
+      operationId: getChatHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: User ID
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of messages to retrieve
+      responses:
+        '200':
+          description: Chat history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  history:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== ANALYTICS ROUTES ====================
+  /api/analytics/summary:
+    get:
+      tags:
+        - Analytics
+      summary: Get analytics summary
+      description: |
+        Get overall HR analytics summary including employee count, absenteeism, training completion, and retention risk.
+        
+        **User Story**: As an HR Manager, I want to view key HR metrics at a glance so that I can monitor organizational health.
+        
+        **Functionality**: This endpoint aggregates data from multiple sources to provide a comprehensive overview of:
+        - Total employee count and trends
+        - Average absenteeism rates across the organization
+        - Training completion percentages
+        - Retention risk indicators
+        - Quarter-over-quarter comparisons
+      operationId: getAnalyticsSummary
+      responses:
+        '200':
+          description: Analytics summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummary'
+        '401':
+          description: Unauthorized - Authentication token missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Unauthorized access
+                error: Authentication token is required
+        '500':
+          description: Internal server error - Database or calculation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Failed to retrieve analytics summary
+                error: Database connection error
+
+  /api/analytics/absenteeism-trends:
+    get:
+      tags:
+        - Analytics
+      summary: Get absenteeism trends
+      description: |
+        Get absenteeism trends over the last 7 months with breakdown by leave type.
+        
+        **User Story**: As an HR Manager, I want to track absenteeism trends so that I can identify patterns and take preventive action.
+        
+        **Functionality**: Returns time-series data showing:
+        - Approved leave days per month
+        - Burnout-related absences
+        - Sickness-related absences
+        - Month-over-month trends for pattern identification
+      operationId: getAbsenteeismTrends
+      responses:
+        '200':
+          description: Absenteeism trends retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      type: string
+                    example: [May, Jun, Jul, Aug, Sep, Oct, Nov]
+                  series:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: Approved Leave
+                        data:
+                          type: array
+                          items:
+                            type: integer
+                          example: [45, 52, 48, 60, 55, 58, 62]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/analytics/retention-risk:
+    get:
+      tags:
+        - Analytics
+      summary: Get retention risk distribution
+      description: |
+        Get employee retention risk distribution categorized as Low, Medium, or High risk.
+        
+        **User Story**: As an HR Manager, I want to identify employees at risk of leaving so that I can implement retention strategies.
+        
+        **Functionality**: Analyzes employee data including:
+        - Absenteeism rates (>8% indicates high risk)
+        - Training completion rates (<50% indicates high risk)
+        - Engagement metrics
+        - Categorizes employees into risk levels for proactive intervention
+      operationId: getRetentionRisk
+      responses:
+        '200':
+          description: Retention risk data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    example: [Low Risk, Medium Risk, High Risk]
+                  series:
+                    type: array
+                    items:
+                      type: integer
+                    example: [120, 45, 15]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/analytics/training-completion:
+    get:
+      tags:
+        - Analytics
+      summary: Get training completion by department
+      description: |
+        Get training completion rates across all departments with completed vs pending breakdown.
+        
+        **User Story**: As an HR Manager, I want to monitor training completion by department so that I can ensure all teams are meeting development goals.
+        
+        **Functionality**: Provides department-wise analysis of:
+        - Percentage of completed training programs
+        - Percentage of pending/in-progress training
+        - Comparison across departments to identify underperforming teams
+        - Helps prioritize training initiatives
+      operationId: getTrainingCompletion
+      responses:
+        '200':
+          description: Training completion data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      type: string
+                    example: [Engineering, Sales, Marketing, HR]
+                  series:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: Completed
+                        data:
+                          type: array
+                          items:
+                            type: number
+                          example: [85.5, 72.3, 90.1, 88.7]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/analytics/departments:
+    get:
+      tags:
+        - Analytics
+      summary: Get department analytics
+      description: |
+        Get detailed analytics for each department including risk levels, employee counts, and actionable insights.
+        
+        **User Story**: As an HR Manager, I want to view department-specific analytics so that I can address issues at the team level.
+        
+        **Functionality**: Returns comprehensive department data including:
+        - Employee headcount per department
+        - Department-specific absenteeism rates
+        - Pending training counts
+        - Risk level assessment (Low/Medium/High)
+        - Actionable insights and recommendations
+        - Helps identify departments needing attention
+      operationId: getDepartmentAnalytics
+      responses:
+        '200':
+          description: Department analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DepartmentAnalytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/analytics/overview:
+    get:
+      tags:
+        - Analytics
+      summary: Get comprehensive analytics overview
+      description: |
+        Get comprehensive overview of all HR metrics across the organization.
+        
+        **User Story**: As an Executive, I want to see a complete analytics overview so that I can make informed strategic decisions.
+        
+        **Functionality**: Provides organization-wide metrics including:
+        - Total employees, jobs, and applicants
+        - Training program statistics and completion rates
+        - Leave request status breakdown
+        - Department-wise employee distribution
+        - Open positions by department
+        - High-level KPIs for executive decision-making
+      operationId: getAnalyticsOverview
+      responses:
+        '200':
+          description: Analytics overview retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsOverview'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/analytics/recruitment:
+    get:
+      tags:
+        - Analytics
+      summary: Get recruitment analytics
+      description: |
+        Get recruitment funnel analytics with conversion rates and applicant status breakdown.
+        
+        **User Story**: As an HR Manager, I want to analyze recruitment metrics so that I can optimize our hiring process.
+        
+        **Functionality**: Analyzes recruitment pipeline including:
+        - Applicant funnel stages (Applied → Screening → Interview → Offered → Hired)
+        - Conversion rates at each stage
+        - Job-specific recruitment metrics
+        - Total applicants vs positions filled
+        - Identifies bottlenecks in the hiring process
+        - Helps optimize recruitment strategies
+      operationId: getRecruitmentAnalytics
+      responses:
+        '200':
+          description: Recruitment analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruitmentAnalytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/analytics/training:
+    get:
+      tags:
+        - Analytics
+      summary: Get training program analytics
+      description: |
+        Get detailed analytics for all training programs with completion rates and performance scores.
+        
+        **User Story**: As an HR Manager, I want to evaluate training program effectiveness so that I can improve learning outcomes.
+        
+        **Functionality**: Provides training program insights including:
+        - Enrollment numbers per program
+        - Completion rates and trends
+        - Average scores for completed training
+        - Training categories and distribution
+        - Program effectiveness metrics
+        - Helps identify successful programs and areas for improvement
+      operationId: getTrainingAnalytics
+      responses:
+        '200':
+          description: Training analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingAnalytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== LEARNING & DEVELOPMENT ROUTES ====================
+  /api/learning/path/generate:
+    post:
+      tags:
+        - Learning & Development
+      summary: Generate learning path
+      description: |
+        Generate personalized AI-powered learning path based on current role and career goals.
+        **User Story**: As an employee, I want to generate a personalized learning path so that I can develop skills for my career advancement.
+      operationId: generateLearningPath
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_role
+                - career_goal
+              properties:
+                current_role:
+                  type: string
+                  example: Junior Developer
+                  description: Current job role
+                career_goal:
+                  type: string
+                  example: Senior Full Stack Developer
+                  description: Desired career goal
+                employee_id:
+                  type: integer
+                  example: 123
+                  description: Employee ID for tracking
+      responses:
+        '200':
+          description: Learning path generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPath'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/learning/progress/{id}:
+    get:
+      tags:
+        - Learning & Development
+      summary: Get learning progress
+      description: |
+        Get learning progress for an employee.
+        **User Story**: As an employee, I want to track my learning progress so that I can monitor my development journey.
+      operationId: getLearningProgress
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Employee ID
+      responses:
+        '200':
+          description: Learning progress retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  progress:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TrainingProgress'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/learning/module/complete:
+    patch:
+      tags:
+        - Learning & Development
+      summary: Mark module as complete
+      description: |
+        Mark a learning module as completed.
+        **User Story**: As an employee, I want to mark modules as complete so that my progress is tracked accurately.
+      operationId: completeModule
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - module_id
+              properties:
+                module_id:
+                  type: integer
+                  example: 456
+                  description: Module ID to mark as complete
+      responses:
+        '200':
+          description: Module marked as complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Module marked as complete
+                  module_id:
+                    type: integer
+                    example: 456
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/learning/roles-goals:
+    get:
+      tags:
+        - Learning & Development
+      summary: Get available roles and goals
+      description: Get list of available roles and career goals for learning path generation
+      operationId: getRolesAndGoals
+      responses:
+        '200':
+          description: Roles and goals retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                    example: [Junior Developer, Senior Developer, Team Lead, Architect]
+                  goals:
+                    type: array
+                    items:
+                      type: string
+                    example: [Full Stack Developer, DevOps Engineer, Technical Lead]
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== SENTIMENT ANALYSIS ROUTES ====================
+  /api/sentiment/analyze:
+    post:
+      tags:
+        - Sentiment Analysis
+      summary: Analyze sentiment
+      description: |
+        Analyze sentiment from employee feedback using AI natural language processing.
+        
+        **User Story**: As an HR Manager, I want to analyze employee feedback sentiment so that I can understand team morale and concerns.
+        
+        **Functionality**: AI sentiment analysis that:
+        - Processes employee feedback text
+        - Classifies sentiment (positive, neutral, negative)
+        - Calculates sentiment percentages
+        - Identifies key themes and topics
+        - Provides actionable insights
+        - Helps measure employee satisfaction
+      operationId: analyzeSentiment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - feedback
+              properties:
+                feedback:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    - Great work-life balance and supportive team
+                    - Need better communication from management
+                    - Love the flexible working hours
+                  description: Array of feedback text
+      responses:
+        '200':
+          description: Sentiment analysis completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analysis:
+                    $ref: '#/components/schemas/SentimentAnalysis'
+                  total_feedback:
+                    type: integer
+                    example: 3
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/sentiment/trend:
+    get:
+      tags:
+        - Sentiment Analysis
+      summary: Get sentiment trends
+      description: |
+        Get sentiment trends over time.
+        **User Story**: As an HR Manager, I want to view sentiment trends so that I can track changes in employee satisfaction.
+      operationId: getSentimentTrend
+      responses:
+        '200':
+          description: Sentiment trends retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trends:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: string
+                          example: November
+                        positive:
+                          type: number
+                          example: 65.5
+                        neutral:
+                          type: number
+                          example: 25.0
+                        negative:
+                          type: number
+                          example: 9.5
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/sentiment/themes:
+    get:
+      tags:
+        - Sentiment Analysis
+      summary: Get sentiment themes
+      description: |
+        Get key themes from sentiment analysis.
+        **User Story**: As an HR Manager, I want to identify key themes in employee feedback so that I can address common concerns.
+      operationId: getSentimentThemes
+      responses:
+        '200':
+          description: Sentiment themes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  themes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        theme:
+                          type: string
+                          example: Work-Life Balance
+                        sentiment:
+                          type: string
+                          enum: [positive, neutral, negative]
+                          example: positive
+                        count:
+                          type: integer
+                          example: 45
+                        percentage:
+                          type: number
+                          example: 32.5
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== WELLNESS ROUTES ====================
+  /api/wellness/resources:
+    get:
+      tags:
+        - Wellness
+      summary: Get wellness resources
+      description: |
+        Get available wellness resources for employees.
+        **User Story**: As an employee, I want to access wellness resources so that I can maintain my physical and mental health.
+      operationId: getWellnessResources
+      responses:
+        '200':
+          description: Wellness resources retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resources:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WellnessResource'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/wellness/tips:
+    get:
+      tags:
+        - Wellness
+      summary: Get AI wellness tips
+      description: |
+        Get AI-generated wellness tips based on selected category.
+        
+        **User Story**: As an employee, I want to receive personalized wellness tips so that I can improve my wellbeing.
+        
+        **Functionality**: Generates AI-powered wellness recommendations for:
+        - General wellness practices
+        - Mental health strategies
+        - Physical fitness tips
+        - Nutrition guidance
+        - Sleep improvement techniques
+        - Personalized based on category selection
+      operationId: getWellnessTips
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            default: general
+            enum: [general, mental, physical, nutrition, sleep]
+          description: Wellness category for targeted tips
+      responses:
+        '200':
+          description: Wellness tips retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tips:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Take regular breaks every hour
+                      - Stay hydrated throughout the day
+                      - Practice good posture at your desk
+        '400':
+          description: Invalid category parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid wellness category
+                error: Category must be one of general, mental, physical, nutrition, sleep
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/wellness/events:
+    get:
+      tags:
+        - Wellness
+      summary: Get wellness events
+      description: |
+        Get upcoming wellness events and workshops.
+        **User Story**: As an employee, I want to view upcoming wellness events so that I can participate in activities that interest me.
+      operationId: getWellnessEvents
+      responses:
+        '200':
+          description: Wellness events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WellnessEvent'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/wellness/events/register:
+    post:
+      tags:
+        - Wellness
+      summary: Register for wellness event
+      description: |
+        Register for a wellness event.
+        **User Story**: As an employee, I want to register for wellness events so that I can participate in company wellness programs.
+      operationId: registerForWellnessEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - employee_id
+                - event_id
+              properties:
+                employee_id:
+                  type: integer
+                  example: 123
+                  description: Employee ID
+                event_id:
+                  type: integer
+                  example: 456
+                  description: Event ID
+      responses:
+        '200':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Successfully registered for event
+                  employee_id:
+                    type: integer
+                    example: 123
+                  event_id:
+                    type: integer
+                    example: 456
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== EMPLOYEE WELLNESS ROUTES ====================
+  /api/empwellness/resources:
+    get:
+      tags:
+        - Wellness
+      summary: Get employee wellness resources
+      description: Get wellness resources for employees (alias endpoint)
+      operationId: getEmpWellnessResources
+      responses:
+        '200':
+          description: Employee wellness resources retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resources:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WellnessResource'
+
+  /api/empwellness/events:
+    get:
+      tags:
+        - Wellness
+      summary: Get employee wellness events
+      description: Get wellness events for employees (alias endpoint)
+      operationId: getEmpWellnessEvents
+      responses:
+        '200':
+          description: Employee wellness events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WellnessEvent'
+
+  /api/empwellness/register:
+    post:
+      tags:
+        - Wellness
+      summary: Register for employee wellness event
+      description: Register for wellness event (alias endpoint)
+      operationId: registerEmpWellnessEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - employee_id
+                - event_id
+              properties:
+                employee_id:
+                  type: integer
+                  example: 123
+                event_id:
+                  type: integer
+                  example: 456
+      responses:
+        '200':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Successfully registered for event
+
+  # ==================== HR WELLNESS ROUTES ====================
+  /api/hr/wellness/resources:
+    get:
+      tags:
+        - Wellness
+      summary: Get HR wellness resources
+      description: |
+        Get wellness resources for HR management.
+        **User Story**: As an HR Manager, I want to manage wellness resources so that I can provide comprehensive support to employees.
+      operationId: getHRWellnessResources
+      responses:
+        '200':
+          description: HR wellness resources retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resources:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WellnessResource'
+
+  /api/hr/wellness/alerts:
+    get:
+      tags:
+        - Wellness
+      summary: Get absence alerts
+      description: |
+        Get alerts for employees with high absence rates requiring HR attention.
+        
+        **User Story**: As an HR Manager, I want to receive absence alerts so that I can proactively address attendance issues.
+        
+        **Functionality**: Monitors and alerts on:
+        - Employees with excessive absence days
+        - Recent absence patterns
+        - Warning vs critical status levels
+        - Enables early intervention
+        - Helps prevent burnout and retention issues
+      operationId: getAbsenceAlerts
+      responses:
+        '200':
+          description: Absence alerts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        employee_id:
+                          type: integer
+                          example: 1
+                        employee_name:
+                          type: string
+                          example: John Doe
+                        absence_days:
+                          type: integer
+                          example: 5
+                        last_absence:
+                          type: string
+                          format: date
+                          example: 2025-11-10
+                        status:
+                          type: string
+                          enum: [warning, critical]
+                          example: warning
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/hr/wellness/milestones:
+    get:
+      tags:
+        - Wellness
+      summary: Get employee milestones
+      description: |
+        Get employee work anniversaries and career milestones for recognition.
+        
+        **User Story**: As an HR Manager, I want to track employee milestones so that I can celebrate their achievements.
+        
+        **Functionality**: Tracks and reports:
+        - Work anniversaries (1, 5, 10, 15+ years)
+        - Upcoming milestone dates
+        - Employee tenure information
+        - Supports employee recognition programs
+        - Boosts morale and retention
+      operationId: getEmployeeMilestones
+      responses:
+        '200':
+          description: Employee milestones retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  milestones:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        employee_id:
+                          type: integer
+                          example: 1
+                        employee_name:
+                          type: string
+                          example: John Doe
+                        milestone:
+                          type: string
+                          example: 5 Year Anniversary
+                        date:
+                          type: string
+                          format: date
+                          example: 2025-11-20
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/hr/wellness/awards:
+    get:
+      tags:
+        - Wellness
+      summary: Get employee awards
+      description: |
+        Get employee awards and recognitions for outstanding performance.
+        
+        **User Story**: As an HR Manager, I want to track employee awards so that I can recognize outstanding performance.
+        
+        **Functionality**: Manages recognition program including:
+        - Employee of the Month/Quarter/Year awards
+        - Performance-based recognitions
+        - Award history and dates
+        - Supports employee motivation
+        - Tracks recognition trends
+      operationId: getEmployeeAwards
+      responses:
+        '200':
+          description: Employee awards retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  awards:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        employee_id:
+                          type: integer
+                          example: 1
+                        employee_name:
+                          type: string
+                          example: John Doe
+                        award:
+                          type: string
+                          example: Employee of the Month
+                        date:
+                          type: string
+                          format: date
+                          example: 2025-11-01
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/hr/wellness/birthdays:
+    get:
+      tags:
+        - Wellness
+      summary: Get upcoming birthdays
+      description: |
+        Get upcoming employee birthdays for celebration planning.
+        
+        **User Story**: As an HR Manager, I want to see upcoming birthdays so that I can organize celebrations.
+        
+        **Functionality**: Provides birthday calendar including:
+        - Upcoming employee birthdays
+        - Sorted by date for planning
+        - Supports team building activities
+        - Enhances workplace culture
+        - Helps maintain personal connections
+      operationId: getUpcomingBirthdays
+      responses:
+        '200':
+          description: Upcoming birthdays retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  birthdays:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        employee_id:
+                          type: integer
+                          example: 1
+                        employee_name:
+                          type: string
+                          example: John Doe
+                        date:
+                          type: string
+                          format: date
+                          example: 2025-11-20
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/hr/wellness/surveys:
+    get:
+      tags:
+        - Wellness
+      summary: Get wellness surveys
+      description: |
+        Get active wellness and engagement surveys.
+        **User Story**: As an HR Manager, I want to manage surveys so that I can gather employee feedback.
+      operationId: getWellnessSurveys
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Surveys retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  surveys:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WellnessSurvey'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Wellness
+      summary: Create wellness survey
+      description: |
+        Create a new wellness survey.
+        **User Story**: As an HR Manager, I want to create surveys so that I can collect employee feedback on wellness initiatives.
+      operationId: createWellnessSurvey
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+              properties:
+                title:
+                  type: string
+                  example: Q4 Wellness Survey
+                description:
+                  type: string
+                  example: Help us improve our wellness programs
+                deadline:
+                  type: string
+                  format: date-time
+                  example: 2025-12-31T23:59:59Z
+      responses:
+        '201':
+          description: Survey created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Survey created successfully
+                  survey_id:
+                    type: integer
+                    example: 789
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== EMPLOYEE DASHBOARD ROUTES ====================
+  /api/employee/dashboard/summary:
+    get:
+      tags:
+        - Employee Dashboard
+      summary: Get employee dashboard summary
+      description: |
+        Get comprehensive dashboard summary for an employee.
+        **User Story**: As an employee, I want to view my dashboard summary so that I can see my training progress and wellness information at a glance.
+      operationId: getEmployeeDashboardSummary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: employee_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Employee ID
+      responses:
+        '200':
+          description: Dashboard summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeDashboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/employee/ai_skill_recommendations:
+    post:
+      tags:
+        - Employee Dashboard
+      summary: Get AI skill recommendations
+      description: |
+        Get personalized skill recommendations based on career goals.
+        **User Story**: As an employee, I want to receive skill recommendations so that I can plan my professional development.
+      operationId: getSkillRecommendations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - employee_id
+              properties:
+                employee_id:
+                  type: integer
+                  example: 123
+                  description: Employee ID
+                career_goal:
+                  type: string
+                  example: Senior Software Engineer
+                  description: Career goal
+      responses:
+        '200':
+          description: Skill recommendations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        skill:
+                          type: string
+                          example: Kubernetes
+                        priority:
+                          type: string
+                          enum: [high, medium, low]
+                          example: high
+                        reason:
+                          type: string
+                          example: Essential for cloud-native development
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/employee/document_request/reference:
+    post:
+      tags:
+        - Employee Dashboard
+      summary: Generate reference letter
+      description: |
+        Generate AI-powered reference letter for employee.
+        **User Story**: As an employee, I want to request a reference letter so that I can use it for job applications or other purposes.
+      operationId: generateReferenceLetter
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - employee_id
+              properties:
+                employee_id:
+                  type: integer
+                  example: 123
+                  description: Employee ID
+                achievements:
+                  type: string
+                  example: Led successful migration to microservices, mentored 5 junior developers
+                  description: Key achievements to highlight
+      responses:
+        '200':
+          description: Reference letter generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  letter:
+                    type: string
+                    example: |
+                      To Whom It May Concern,
+                      
+                      This letter serves as a reference for John Doe...
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/employee/document_request/employment_proof:
+    post:
+      tags:
+        - Employee Dashboard
+      summary: Generate employment proof
+      description: |
+        Generate employment verification document.
+        **User Story**: As an employee, I want to request employment proof so that I can provide it to banks or other institutions.
+      operationId: generateEmploymentProof
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - employee_id
+              properties:
+                employee_id:
+                  type: integer
+                  example: 123
+                  description: Employee ID
+      responses:
+        '200':
+          description: Employment proof generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  proof:
+                    type: string
+                    example: |
+                      EMPLOYMENT VERIFICATION
+                      
+                      This is to certify that John Doe is employed with our organization...
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== SKILLS ROUTES ====================
+  /api/skills/trending:
+    get:
+      tags:
+        - Skills
+      summary: Get trending skills
+      description: |
+        Get trending skills by department or industry with demand scores and trend indicators.
+        
+        **User Story**: As an employee, I want to see trending skills so that I can stay current with industry demands.
+        
+        **Functionality**: Provides market intelligence on:
+        - Most in-demand skills by department
+        - Trend direction (rising, stable, declining)
+        - Demand scores indicating market need
+        - Helps employees prioritize skill development
+        - Supports career planning and advancement
+      operationId: getTrendingSkills
+      parameters:
+        - name: department
+          in: query
+          schema:
+            type: string
+            default: Technology
+          description: Department or industry for skill filtering
+      responses:
+        '200':
+          description: Trending skills retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trending_skills:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        skill:
+                          type: string
+                          example: Artificial Intelligence
+                        trend:
+                          type: string
+                          enum: [rising, stable, declining]
+                          example: rising
+                        demand_score:
+                          type: number
+                          example: 95.5
+        '400':
+          description: Invalid department parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid department specified
+                error: Department not found in system
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== JOB MANAGEMENT ROUTES ====================
+  /api/jobs:
+    get:
+      tags:
+        - Job Management
+      summary: Get all jobs
+      description: |
+        Retrieve a list of all job postings.
+        **User Story**: As a user, I want to view available jobs so that I can apply.
+      operationId: getAllJobs
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of jobs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Job'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/jobs/{job_id}:
+    put:
+      tags:
+        - Job Management
+      summary: Update job details
+      description: Update job posting details.
+      operationId: updateJob
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobPostingRequest'
+      responses:
+        '200':
+          description: Job updated successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Job Management
+      summary: Delete job
+      description: Delete a job posting.
+      operationId: deleteJob
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/jobs/{job_id}/status:
+    put:
+      tags:
+        - Job Management
+      summary: Update job status
+      description: Update the status of a job (e.g., Open, Closed).
+      operationId: updateJobStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [Draft, Open, On Hold, Closed]
+      responses:
+        '200':
+          description: Status updated successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/jobs/{job_id}/finalize:
+    post:
+      tags:
+        - Job Management
+      summary: Finalize job
+      description: Finalize a job posting (sets status to On Hold).
+      operationId: finalizeJob
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job finalized
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/jobs/{job_id}/post:
+    post:
+      tags:
+        - Job Management
+      summary: Post job
+      description: Publish a job posting (sets status to Open).
+      operationId: postJob
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job posted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/jobs/{job_id}/applicants:
+    get:
+      tags:
+        - Job Management
+      summary: Get job applicants
+      description: Get list of applicants for a specific job.
+      operationId: getJobApplicants
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Applicants retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Applicant'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== LEAVE MANAGEMENT ROUTES ====================
+  /api/leave/request:
+    post:
+      tags:
+        - Leave Management
+      summary: Submit leave request
+      description: |
+        Submit a new leave request.
+        **User Story**: As an employee, I want to request leave so that I can take time off.
+      operationId: submitLeaveRequest
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - leave_type
+                - start_date
+                - end_date
+                - reason
+              properties:
+                leave_type:
+                  type: string
+                  enum: [Annual, Sick, Personal, Maternity, Paternity]
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: Leave request submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  leave_request:
+                    $ref: '#/components/schemas/LeaveRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/employee/leave/status:
+    get:
+      tags:
+        - Leave Management
+      summary: Get my leave requests
+      description: Get list of leave requests for the current employee.
+      operationId: getMyLeaveRequests
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Leave requests retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leave_requests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaveRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/hr/leave/requests:
+    get:
+      tags:
+        - Leave Management
+      summary: Get all pending leave requests (HR)
+      description: Get all pending leave requests for HR review.
+      operationId: getPendingLeaveRequests
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Pending requests retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leave_requests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaveRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/hr/leave/action:
+    post:
+      tags:
+        - Leave Management
+      summary: Approve/Reject leave request
+      description: Process a leave request.
+      operationId: processLeaveRequest
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - leave_id
+                - action
+              properties:
+                leave_id:
+                  type: integer
+                action:
+                  type: string
+                  enum: [Approve, Reject]
+      responses:
+        '200':
+          description: Leave request processed successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== EMPLOYEE ADMIN ROUTES ====================
+  /api/employees/pending:
+    get:
+      tags:
+        - Employee Management
+      summary: Get pending employees
+      description: Get list of employees waiting for approval.
+      operationId: getPendingEmployees
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Pending employees retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pending_employees:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user_id:
+                          type: integer
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/employees/approve:
+    post:
+      tags:
+        - Employee Management
+      summary: Approve employee
+      description: Approve and activate a pending employee.
+      operationId: approveEmployee
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: integer
+                dept_id:
+                  type: integer
+                job_title:
+                  type: string
+                salary:
+                  type: number
+                manager_id:
+                  type: integer
+                skills:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Employee approved successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/employee/personal-details:
+    get:
+      tags:
+        - Employee Management
+      summary: Get personal details
+      description: Get personal details (e.g., DOB) for the current employee.
+      operationId: getPersonalDetails
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Personal details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dob:
+                    type: string
+                    format: date
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Employee Management
+      summary: Update personal details
+      description: Update personal details (e.g., DOB).
+      operationId: updatePersonalDetails
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dob:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Personal details updated successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== POLICY ROUTES ====================
+  /api/policies:
+    get:
+      tags:
+        - Policy & Job Generation
+      summary: Get all policies
+      description: Retrieve a list of all generated policies.
+      operationId: getAllPolicies
+      responses:
+        '200':
+          description: Policies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Policy'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== LEARNING ROUTES (EXTENDED) ====================
+  /api/learning/generate-path:
+    post:
+      tags:
+        - Learning & Development
+      summary: Generate learning path
+      description: Generate a new AI-powered learning path.
+      operationId: generateLearningPath
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_role
+                - career_goal
+              properties:
+                current_role:
+                  type: string
+                career_goal:
+                  type: string
+                employee_id:
+                  type: integer
+      responses:
+        '200':
+          description: Learning path generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPath'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/learning/paths/{employee_id}:
+    get:
+      tags:
+        - Learning & Development
+      summary: Get learning paths
+      description: Get all learning paths for an employee.
+      operationId: getLearningPaths
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: employee_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Learning paths retrieved successfully
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/learning/path/module:
+    patch:
+      tags:
+        - Learning & Development
+      summary: Update module status
+      description: Update the completion status of a module in a learning path.
+      operationId: updateModuleStatus
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - path_id
+                - module_index
+              properties:
+                path_id:
+                  type: integer
+                module_index:
+                  type: integer
+                completed:
+                  type: boolean
+      responses:
+        '200':
+          description: Module status updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/learning/progress/{employee_id}:
+    get:
+      tags:
+        - Learning & Development
+      summary: Get training progress
+      description: Get detailed training progress for an employee.
+      operationId: getTrainingProgress
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: employee_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Progress retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  progress:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TrainingProgress'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/learning/training/status:
+    patch:
+      tags:
+        - Learning & Development
+      summary: Update training status
+      description: Update the status of a specific training enrollment.
+      operationId: updateTrainingStatus
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - training_id
+                - status
+              properties:
+                training_id:
+                  type: integer
+                status:
+                  type: string
+                  enum: [Enrolled, In Progress, Completed, Dropped]
+      responses:
+        '200':
+          description: Status updated successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/learning/roles-goals:
+    get:
+      tags:
+        - Learning & Development
+      summary: Get roles and goals
+      description: Get available roles and career goals for learning paths.
+      operationId: getRolesAndGoals
+      responses:
+        '200':
+          description: Roles and goals retrieved successfully
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/learning/module/complete:
+    patch:
+      tags:
+        - Learning & Development
+      summary: Mark module complete
+      description: Mark a standalone module as complete.
+      operationId: completeModule
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - module_id
+              properties:
+                module_id:
+                  type: integer
+      responses:
+        '200':
+          description: Module marked as complete
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ==================== OTHER ROUTES ====================
+  /api/applicants/{applicant_id}/scores:
+    post:
+      tags:
+        - Recruitment
+      summary: Save applicant scores
+      description: Save manual interview scores for an applicant.
+      operationId: saveApplicantScores
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: applicant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - scores
+              properties:
+                scores:
+                  type: array
+                  items:
+                    type: number
+      responses:
+        '200':
+          description: Scores saved successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/chat/log:
+    post:
+      tags:
+        - HR Chatbot
+      summary: Log chat message
+      description: Log a chat message without triggering AI response.
+      operationId: logChatMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - text
+              properties:
+                user_id:
+                  type: integer
+                text:
+                  type: string
+                sender:
+                  type: string
+                  enum: [user, ai]
+                type:
+                  type: string
+      responses:
+        '201':
+          description: Message logged successfully
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+# ==================== COMPONENTS ====================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /api/auth/login endpoint
+
+  schemas:
+    # ==================== USER & AUTH SCHEMAS ====================
+    User:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+          description: Unique user identifier
+        name:
+          type: string
+          example: John Doe
+          description: Full name of the user
+        email:
+          type: string
+          format: email
+          example: john.doe@company.com
+          description: User email address
+        role:
+          type: string
+          enum: [Admin, HR Manager, Employee, Applicant, Manager, Executive]
+          example: Employee
+          description: User role for access control
+        is_active:
+          type: boolean
+          example: true
+          description: Whether the user account is active
+        created_at:
+          type: string
+          format: date-time
+          example: 2025-01-15T10:30:00Z
+          description: Account creation timestamp
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: An error occurred
+          description: Error message
+        error:
+          type: string
+          example: Detailed error information
+          description: Detailed error information (optional)
+
+    EmployeeDetail:
+      type: object
+      properties:
+        emp_id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 101
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@company.com
+        department:
+          type: string
+          example: Engineering
+        job_title:
+          type: string
+          example: Senior Developer
+        salary:
+          type: number
+          format: float
+          example: 95000
+        hire_date:
+          type: string
+          format: date
+          example: 2020-01-15
+        leaves_taken:
+          type: number
+          format: float
+          example: 5.5
+        skills:
+          type: array
+          items:
+            type: string
+          example: [Python, Vue.js]
+
+    Job:
+      type: object
+      properties:
+        job_id:
+          type: integer
+          example: 101
+        title:
+          type: string
+          example: Senior Software Engineer
+        department:
+          type: string
+          example: Engineering
+        location:
+          type: string
+          example: Remote
+        employment_type:
+          type: string
+          example: Full-time
+        salary_range:
+          type: string
+          example: $120k - $150k
+        status:
+          type: string
+          enum: [Draft, Open, On Hold, Closed]
+          example: Open
+        posted_date:
+          type: string
+          format: date-time
+          example: 2025-11-01T10:00:00Z
+        applicants_count:
+          type: integer
+          example: 15
+        has_applied:
+          type: boolean
+          example: false
+
+    LeaveRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        emp_id:
+          type: integer
+          example: 1
+        leave_type:
+          type: string
+          enum: [Annual, Sick, Personal, Maternity, Paternity]
+          example: Annual
+        start_date:
+          type: string
+          format: date
+          example: 2025-12-20
+        end_date:
+          type: string
+          format: date
+          example: 2025-12-25
+        reason:
+          type: string
+          example: Christmas break
+        status:
+          type: string
+          enum: [Pending, Approved, Rejected]
+          example: Pending
+        number_of_days:
+          type: number
+          format: float
+          example: 5.0
+        created_at:
+          type: string
+          format: date-time
+          example: 2025-11-15T10:00:00Z
+
+    Applicant:
+      type: object
+      properties:
+        applicant_id:
+          type: integer
+          example: 202
+        name:
+          type: string
+          example: Jane Smith
+        email:
+          type: string
+          format: email
+          example: jane.smith@email.com
+        status:
+          type: string
+          enum: [Applied, Screening, Interview, Offered, Hired, Rejected]
+          example: Applied
+        score:
+          type: number
+          format: float
+          example: 85.5
+        resume_url:
+          type: string
+          example: /api/uploads/resumes/jane_resume.pdf
+        summary:
+          type: string
+          example: Experienced developer...
+
+    Policy:
+      type: object
+      properties:
+        policy_id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Remote Work Policy
+        content:
+          type: string
+          example: This policy outlines...
+        category:
+          type: string
+          example: General
+        created_at:
+          type: string
+          format: date-time
+          example: 2025-10-01T10:00:00Z
+
+    PerformanceLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        emp_id:
+          type: integer
+          example: 1
+        score:
+          type: number
+          format: float
+          example: 1.5
+        type:
+          type: string
+          example: HR_Manual
+        comment:
+          type: string
+          example: Great work
+        created_at:
+          type: string
+          format: date-time
+          example: 2025-11-20T10:00:00Z
+
+    # ==================== RECRUITMENT SCHEMAS ====================
+    ParsedResume:
+      type: object
+      properties:
+        name:
+          type: string
+          example: John Doe
+          description: Candidate name
+        email:
+          type: string
+          format: email
+          example: john.doe@email.com
+          description: Contact email
+        phone:
+          type: string
+          example: +1-555-0123
+          description: Contact phone number
+        skills:
+          type: array
+          items:
+            type: string
+          example: [Python, JavaScript, React, AWS, Docker]
+          description: Extracted skills
+        experience:
+          type: array
+          items:
+            type: object
+            properties:
+              company:
+                type: string
+                example: Tech Corp
+              position:
+                type: string
+                example: Senior Developer
+              duration:
+                type: string
+                example: 2020-2023
+              description:
+                type: string
+                example: Led development of microservices architecture
+          description: Work experience
+        education:
+          type: array
+          items:
+            type: object
+            properties:
+              degree:
+                type: string
+                example: Bachelor of Science in Computer Science
+              institution:
+                type: string
+                example: University of Technology
+              year:
+                type: string
+                example: 2019
+          description: Educational background
+        summary:
+          type: string
+          example: Experienced software engineer with 5+ years in full-stack development
+          description: Professional summary
+
+    JobPostingRequest:
+      type: object
+      required:
+        - jobTitle
+        - companyName
+        - location
+      properties:
+        jobTitle:
+          type: string
+          example: Senior Software Engineer
+          description: Job title
+        seniority:
+          type: string
+          enum: [Junior, Mid-Level, Senior, Lead, Executive]
+          example: Senior
+          description: Seniority level
+        companyName:
+          type: string
+          example: Tech Innovations Inc.
+          description: Company name
+        companyBlurb:
+          type: string
+          example: Leading provider of cloud-based solutions
+          description: Brief company description
+        field:
+          type: string
+          example: Software Development
+          description: Industry or field
+        location:
+          type: string
+          example: San Francisco, CA
+          description: Job location
+        employmentType:
+          type: string
+          enum: [Full-time, Part-time, Contract, Temporary]
+          example: Full-time
+          description: Employment type
+        salaryRange:
+          type: string
+          example: $120,000 - $160,000
+          description: Salary range (in USD)
+        coreMission:
+          type: string
+          example: Build scalable cloud infrastructure
+          description: Core mission of the role
+        objectives:
+          type: array
+          items:
+            type: string
+          example:
+            - Design and implement microservices
+            - Lead technical architecture decisions
+            - Mentor junior developers
+          description: Key objectives
+        mustHaveSkills:
+          type: array
+          items:
+            type: string
+          example: [Python, AWS, Kubernetes, Docker]
+          description: Required skills
+        niceToHaveSkills:
+          type: array
+          items:
+            type: string
+          example: [GraphQL, Terraform, CI/CD]
+          description: Preferred skills
+        tools:
+          type: array
+          items:
+            type: string
+          example: [Git, Jira, Jenkins]
+          description: Required tools
+        minExperience:
+          type: string
+          example: 5+ years
+          description: Minimum experience required
+        benefits:
+          type: array
+          items:
+            type: string
+          example:
+            - Health insurance
+            - 401(k) matching
+            - Remote work options
+          description: Benefits offered
+        teamStructure:
+          type: string
+          example: Cross-functional team of 8 engineers
+          description: Team structure
+        tone:
+          type: string
+          enum: [Professional, Friendly, Formal, Startup-friendly, Creative, Technical]
+          default: Professional
+          example: Professional
+          description: Writing tone
+
+    # ==================== CHATBOT SCHEMAS ====================
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: Message ID
+        sender:
+          type: string
+          enum: [user, ai]
+          example: user
+          description: Message sender
+        text:
+          type: string
+          example: What is the leave policy?
+          description: Message text
+        timestamp:
+          type: string
+          format: date-time
+          example: 2025-11-15T10:30:00Z
+          description: Message timestamp
+
+    # ==================== ANALYTICS SCHEMAS ====================
+    AnalyticsSummary:
+      type: object
+      properties:
+        total_employees:
+          type: integer
+          example: 250
+          description: Total number of employees
+        avg_absenteeism:
+          type: number
+          format: float
+          example: 5.2
+          description: Average absenteeism percentage
+        training_completion_rate:
+          type: number
+          format: float
+          example: 78.5
+          description: Training completion rate percentage
+        high_retention_risk_percent:
+          type: number
+          format: float
+          example: 12.3
+          description: Percentage of employees at high retention risk
+        trends:
+          type: object
+          properties:
+            employees_vs_last_quarter:
+              type: number
+              example: 5
+              description: Change in employee count vs last quarter
+            absenteeism_vs_last_month:
+              type: number
+              example: -2.1
+              description: Change in absenteeism vs last month
+            training_vs_last_quarter:
+              type: number
+              example: 8.3
+              description: Change in training completion vs last quarter
+            retention_vs_last_quarter:
+              type: number
+              example: -1.5
+              description: Change in retention risk vs last quarter
+
+    DepartmentAnalytics:
+      type: object
+      properties:
+        department:
+          type: string
+          example: Engineering
+          description: Department name
+        risk_level:
+          type: string
+          enum: [Low Risk, Medium Risk, High Risk]
+          example: Low Risk
+          description: Overall risk level
+        employee_count:
+          type: integer
+          example: 45
+          description: Number of employees
+        pending_training:
+          type: integer
+          example: 12
+          description: Number of pending trainings
+        absenteeism:
+          type: number
+          format: float
+          example: 4.5
+          description: Absenteeism percentage
+        insights:
+          type: array
+          items:
+            type: string
+          example:
+            - 27% haven't completed training
+            - Avg absenteeism: 4.5%
+          description: Key insights
+
+    AnalyticsOverview:
+      type: object
+      properties:
+        overview:
+          type: object
+          properties:
+            total_employees:
+              type: integer
+              example: 250
+            total_jobs:
+              type: integer
+              example: 15
+            open_jobs:
+              type: integer
+              example: 8
+            total_applicants:
+              type: integer
+              example: 120
+        training:
+          type: object
+          properties:
+            total_programs:
+              type: integer
+              example: 25
+            total_enrollments:
+              type: integer
+              example: 450
+            completed:
+              type: integer
+              example: 320
+            completion_rate:
+              type: number
+              example: 71.1
+        leave:
+          type: object
+          properties:
+            total_requests:
+              type: integer
+              example: 180
+            pending:
+              type: integer
+              example: 15
+            approved:
+              type: integer
+              example: 145
+        departments:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: Engineering
+              employee_count:
+                type: integer
+                example: 45
+              open_positions:
+                type: integer
+                example: 3
+
+    RecruitmentAnalytics:
+      type: object
+      properties:
+        recruitment_funnel:
+          type: array
+          items:
+            type: object
+            properties:
+              job_title:
+                type: string
+                example: Senior Software Engineer
+              job_id:
+                type: integer
+                example: 101
+              total_applicants:
+                type: integer
+                example: 45
+              funnel:
+                type: object
+                properties:
+                  Applied:
+                    type: integer
+                    example: 45
+                  Screening:
+                    type: integer
+                    example: 25
+                  Interview:
+                    type: integer
+                    example: 10
+                  Offered:
+                    type: integer
+                    example: 3
+                  Hired:
+                    type: integer
+                    example: 2
+                  Rejected:
+                    type: integer
+                    example: 20
+              conversion_rate:
+                type: number
+                example: 4.44
+        total_jobs:
+          type: integer
+          example: 15
+        total_applicants:
+          type: integer
+          example: 120
+
+    TrainingAnalytics:
+      type: object
+      properties:
+        training_programs:
+          type: array
+          items:
+            type: object
+            properties:
+              training_id:
+                type: integer
+                example: 1
+              title:
+                type: string
+                example: Advanced Python Programming
+              category:
+                type: string
+                example: Technical
+              total_enrolled:
+                type: integer
+                example: 35
+              completed:
+                type: integer
+                example: 28
+              completion_rate:
+                type: number
+                example: 80.0
+              average_score:
+                type: number
+                example: 87.5
+        total_programs:
+          type: integer
+          example: 25
+        total_enrollments:
+          type: integer
+          example: 450
+
+    # ==================== LEARNING SCHEMAS ====================
+    LearningPath:
+      type: object
+      properties:
+        learning_path:
+          type: object
+          properties:
+            current_role:
+              type: string
+              example: Junior Developer
+              description: Current role
+            career_goal:
+              type: string
+              example: Senior Full Stack Developer
+              description: Career goal
+            modules:
+              type: array
+              items:
+                type: object
+                properties:
+                  module_id:
+                    type: integer
+                    example: 1
+                  title:
+                    type: string
+                    example: Advanced JavaScript
+                  description:
+                    type: string
+                    example: Master modern JavaScript features
+                  duration:
+                    type: string
+                    example: 4 weeks
+                  skills_covered:
+                    type: array
+                    items:
+                      type: string
+                    example: [ES6+, Async/Await, Promises]
+              description: Learning modules
+            estimated_duration:
+              type: string
+              example: 6 months
+              description: Estimated completion time
+
+    TrainingProgress:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: Progress record ID
+        training_id:
+          type: integer
+          example: 5
+          description: Training ID
+        status:
+          type: string
+          enum: [Enrolled, In Progress, Completed, Dropped]
+          example: In Progress
+          description: Training status
+        progress:
+          type: number
+          format: float
+          example: 65.5
+          description: Progress percentage
+        enrolled_date:
+          type: string
+          format: date-time
+          example: 2025-09-01T00:00:00Z
+          description: Enrollment date
+
+    # ==================== SENTIMENT SCHEMAS ====================
+    SentimentAnalysis:
+      type: object
+      properties:
+        overall:
+          type: string
+          enum: [positive, neutral, negative]
+          example: positive
+          description: Overall sentiment
+        breakdown:
+          type: object
+          properties:
+            positive:
+              type: number
+              example: 60
+              description: Positive sentiment percentage
+            neutral:
+              type: number
+              example: 30
+              description: Neutral sentiment percentage
+            negative:
+              type: number
+              example: 10
+              description: Negative sentiment percentage
+        themes:
+          type: array
+          items:
+            type: string
+          example: [work-life balance, team collaboration, growth opportunities]
+          description: Key themes identified
+
+    # ==================== WELLNESS SCHEMAS ====================
+    WellnessResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: Resource ID
+        title:
+          type: string
+          example: Mental Health Support
+          description: Resource title
+        description:
+          type: string
+          example: Access to counseling services and mental health resources
+          description: Resource description
+        icon:
+          type: string
+          example: brain
+          description: Icon identifier
+        color:
+          type: string
+          example: blue
+          description: Color theme
+        action_label:
+          type: string
+          example: Learn More
+          description: Action button label
+        link:
+          type: string
+          example: /wellness/mental-health
+          description: Resource link
+        type:
+          type: string
+          example: mental-health
+          description: Resource type
+        category:
+          type: string
+          example: Mental Health
+          description: Resource category
+
+    WellnessEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: Event ID
+        title:
+          type: string
+          example: Yoga Session
+          description: Event title
+        description:
+          type: string
+          example: Weekly yoga session for stress relief
+          description: Event description
+        date:
+          type: string
+          example: Nov 20, 2025 at 10:00 AM
+          description: Event date and time
+        location:
+          type: string
+          example: Conference Room A
+          description: Event location
+        max_participants:
+          type: integer
+          example: 20
+          description: Maximum number of participants
+
+    WellnessSurvey:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: Survey ID
+        title:
+          type: string
+          example: Q4 Wellness Survey
+          description: Survey title
+        description:
+          type: string
+          example: Help us improve our wellness programs
+          description: Survey description
+        deadline:
+          type: string
+          example: Dec 31, 2025
+          description: Survey deadline
+        status:
+          type: string
+          enum: [Active, Closed]
+          example: Active
+          description: Survey status
+
+    # ==================== EMPLOYEE DASHBOARD SCHEMAS ====================
+    EmployeeDashboard:
+      type: object
+      properties:
+        employee:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 123
+              description: Employee ID
+            name:
+              type: string
+              example: John Doe
+              description: Employee name
+            email:
+              type: string
+              format: email
+              example: john.doe@company.com
+              description: Employee email
+            department:
+              type: string
+              example: Engineering
+              description: Department name
+            position:
+              type: string
+              example: Senior Developer
+              description: Job position
+            hire_date:
+              type: string
+              format: date
+              example: 2020-01-15
+              description: Hire date
+        training:
+          type: object
+          properties:
+            completed:
+              type: integer
+              example: 8
+              description: Completed trainings
+            total:
+              type: integer
+              example: 25
+              description: Total available trainings
+            completion_rate:
+              type: number
+              example: 32.0
+              description: Completion rate percentage
+        wellness:
+          type: object
+          properties:
+            resources_available:
+              type: integer
+              example: 15
+              description: Available wellness resources
+            upcoming_events:
+              type: integer
+              example: 5
+              description: Upcoming wellness events
+
+  # ==================== RESPONSE TEMPLATES ====================
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Invalid request parameters
+            error: Missing required field 'email'
+
+    Unauthorized:
+      description: Unauthorized - Authentication required or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Unauthorized access
+            error: Invalid or expired JWT token
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Resource not found
+            error: The requested resource does not exist
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Internal server error occurred
+            error: Database connection failed
+
+# ==================== SECURITY ====================
+security:
+  - BearerAuth: []

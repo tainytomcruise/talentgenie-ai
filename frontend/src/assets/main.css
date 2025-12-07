@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@layer components {
+  .job-posting {
+    @apply font-sans text-gray-800 leading-relaxed;
+  }
+
+  .job-posting h1 {
+    @apply text-3xl font-bold text-gray-900 mb-2 mt-6;
+  }
+
+  .job-posting h2 {
+    @apply text-xl font-semibold text-gray-700 mb-4;
+  }
+
+  .job-posting h3 {
+    @apply text-lg font-bold text-gray-900 mt-6 mb-3 uppercase tracking-wide;
+  }
+
+  .job-posting p {
+    @apply mb-4 text-base;
+  }
+
+  .job-posting ul {
+    @apply list-disc list-outside ml-5 mb-4 space-y-1;
+  }
+
+  .job-posting li {
+    @apply text-base;
+  }
+
+  .job-posting hr {
+    @apply my-6 border-gray-200;
+  }
+
+  .job-meta {
+    @apply flex flex-wrap gap-4 text-sm text-gray-600 mb-6;
+  }
+
+  .job-meta p {
+    @apply mb-0;
+  }
+}
