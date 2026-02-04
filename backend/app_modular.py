@@ -2,6 +2,7 @@
 Main Flask Application - Modular Structure
 AI-Powered HR Management System
 """
+import os
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -183,7 +184,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
 
-    import os
+    
     port = int(os.environ.get("PORT", 5001))
 
     app.run(host='0.0.0.0', port=port, debug=os.environ.get("RENDER") is None)
