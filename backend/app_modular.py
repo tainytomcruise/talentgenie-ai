@@ -56,7 +56,7 @@ api = Api(app)
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///talentgenie.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = 'super-secret-key'
+app.config['JWT_SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", "dev-secret-key")
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)  # 7 days expiration
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
