@@ -94,16 +94,19 @@ except Exception as e:
 @app.route("/debug-user/<email>")
 def debug_user(email):
     from models import User
-    user = User.query.filter_by(email=email).first()
+    from flask import current_app
 
-    if not user:
-        return {"error": "User not found"}
+    with current_app.app_context():
+        user = User.query.filter_by(email=email).first()
 
-    return {
-        "email": user.email,
-        "role": user.role,
-        "is_active": user.is_active
-    }
+        if not user:
+            return {"error": "User not found"}
+
+        return {
+            "email": user.email,
+            "role": user.role,
+            "is_active": user.is_active
+        }
 
 
 # Authentication routes
