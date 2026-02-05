@@ -55,17 +55,56 @@ CORS(app)
 api = Api(app)
 
 # Configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///talentgenie.db'
+database_url = os.environ.get("DATABASE_URL")
+
+database_url = os.environ.get("DATABASE_URL")
+
+if not database_url:
+    raise ValueError("DATABASE_URL is not set. Check Render environment variables.")
+
+# Fix Render format
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+# # Fix for Render postgres:// vs postgresql://
+# if database_url and database_url.startswith("postgres://"):
+#     database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", "dev-secret-key")
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)  # 7 days expiration
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # Initialize extensions
-db.init_app(app)
-jwt = JWTManager(app)
+try:
+    with app.app_context():
+        db.create_all()
+except Exception as e:
+    print("Database initialization failed:", e)
+
+
+
+
+
 
 # ==================== REGISTER ROUTES ====================
+
+
+@app.route("/debug-user/<email>")
+def debug_user(email):
+    from models import User
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        return {"error": "User not found"}
+
+    return {
+        "email": user.email,
+        "role": user.role,
+        "is_active": user.is_active
+    }
+
 
 # Authentication routes
 api.add_resource(LoginResource, '/api/auth/login')
@@ -172,7 +211,7 @@ api.add_resource(EmployeeLeaveStatusResource, '/api/employee/leave/status')
 
 # Serve uploaded files
 from flask import send_from_directory
-import os
+
 
 @app.route('/api/uploads/<path:filename>')
 def serve_uploads(filename):
@@ -181,10 +220,5 @@ def serve_uploads(filename):
 # ==================== RUN APPLICATION ====================
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-
-    
     port = int(os.environ.get("PORT", 5001))
-
     app.run(host='0.0.0.0', port=port, debug=os.environ.get("RENDER") is None)
